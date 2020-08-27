@@ -1,0 +1,412 @@
+import java.util.*;
+import java.io.*;
+import java.util.PropertyPermission;
+import java.security.
+
+public class ManageComputers{
+
+	private Scanner keyboard;
+	private	ArrayList<Object> computerList;
+	
+	public static void main(String args[]) throws Exception{
+	
+		if(System.getSecurityManager() != null){
+			ManageComputers manC = new ManageComputers();
+			manC.displayMenu();
+		}else{
+			System.out.println("***ERROR: Program must run under a security Manager! ***");
+		
+		}
+	}
+
+	private ManageComputers() throws Exception{
+	
+		computerList = new ArrayList<Object>();
+		this.keyboard = new Scanner(System.in);	
+
+	}
+	
+	public void displayMenu() throws IOException, ClassNotFoundException{
+
+		int option = -1;
+		while (option != 0){
+			
+			option = -1;
+			System.out.println("====MENU====" + "\n" + "1. Load"
+							+"\n" + "2. Save"
+							+"\n" + "3. List"
+							+"\n" + "4. Add"
+							+"\n" + "5. Delete"
+							+"\n" + "6. Edit"
+							+"\n" + "0. Exit"
+							+"\n" + "Enter selection: ");
+
+			String optionString = keyboard.nextLine();
+
+			try{
+				option = Integer.parseInt(optionString);
+			
+			}catch(NumberFormatException e){
+				//catching parsing error	
+			}	
+	
+			switch (option) {
+			
+				case 1: {
+					Load();
+					break;
+				}
+				case 2: {
+					Save();
+					break;
+				}
+				case 3: {
+					List();
+					break;
+				}
+				case 4: {
+					Add();
+					break;
+				}
+				case 5: {
+					Delete();
+					break;
+				}
+				case 6: {
+					Edit();
+					break;
+				}
+				case 0: {
+					System.out.println("Program has shut down!");
+					break;
+				}
+				
+				default: {
+					System.out.println("***ERROR : Invalid Option!");
+					break;
+
+				}
+
+			}
+							
+			}
+	}
+
+	public void Load() throws FileNotFoundException, IOException, ClassNotFoundException{
+		
+		computerList.clear();
+		LaptopComputer laptop = null;
+		DesktopComputer desktop;
+		int x=1;
+		while(x>0){
+			
+			try{
+				FileInputStream fileIn = new FileInputStream("/root/assign1Data/" + x + ".ser");
+				ObjectInputStream in = new ObjectInputStream(fileIn);
+				String firstVal = decodeString(in.readObject().toString());
+				if (firstVal.equals("amd") || firstVal.equals("intel") || firstVal.equals("nvidia"))			{
+					String decodedCPU = decodeString(in.readObject().toString());
+					int ramSize = (Integer)in.readObject();
+					int diskSize = (Integer)in.readObject();
+					desktop = DesktopComputer.getDesktopComputerInstance(firstVal, decodedCPU, ramSize, diskSize);
+					computerList.add(desktop);
+					in.close();
+					fileIn.close(); 
+				}else{
+					int firstValInt = Integer.parseInt(encodeString(firstVal));
+					String decodedCPU = decodeString(in.readObject().toString());
+					int ramSize = (Integer)in.readObject();
+					int diskSize = (Integer)in.readObject();
+					laptop = LaptopComputer.getLaptopComputerInstance(firstValInt, decodedCPU, ramSize, diskSize); 
+					computerList.add(laptop);
+					in.close();
+					fileIn.close(); 
+				}
+				
+
+			}catch(FileNotFoundException e){
+				break;
+			}catch(ClassCastException e){
+				//FileInputStream fileIn = new FileInputStream("/root/assign1Data/" + x + ".ser");
+				//ObjectInputStream in = new ObjectInputStream(fileIn);
+				
+			}catch(AccessControlException e){
+				System.out.println("***ERROR: access Denied ***");
+			}	
+			x++;
+		}
+		
+	}
+	
+	private String decodeString(String s){
+	
+		String decoded = "";
+		
+		for(int i=0; i <s.length(); i++){
+	
+			char c = s.charAt(i);
+			c--;
+			decoded = decoded + c;
+		}
+		return decoded;
+	}
+
+	public void Save() throws IOException{
+		File directory = new File("/root/assign1Data");
+		File[] files = directory.listFiles();
+		for(File file:files){
+			file.delete();
+		}
+
+		for(int x=0; x<computerList.size(); x++){
+			try{			
+				FileOutputStream fout = new FileOutputStream("/root/assign1Data/" + (x+1) + ".ser");
+				ObjectOutputStream oos = new ObjectOutputStream(fout);
+				try{
+					DesktopComputer desktop = (DesktopComputer)computerList.get(x);
+					String encodedCPU = encodeString(desktop.getCPU());
+					String encodedGPU = encodeString(desktop.getGPU());
+					oos.writeObject(encodedGPU);
+					oos.writeObject(encodedCPU);
+					oos.writeObject(desktop.getRamSize());
+					oos.writeObject(desktop.getDiskSize());
+					oos.close();
+					fout.close();
+				}catch(Exception e){
+					LaptopComputer laptop = (LaptopComputer)computerList.get(x);
+					String encodedCPU = encodeString(laptop.getCPU());
+					oos.writeObject(laptop.getScreenSize());
+					oos.writeObject(encodedCPU);
+					oos.writeObject(laptop.getRamSize());
+					oos.writeObject(laptop.getDiskSize());
+					oos.close();
+					fout.close();
+				}
+			}catch (AccessControlException e){
+				System.out.println("*** ERROR: access Denied ***");
+			}
+		}	
+	}
+	
+	private String encodeString(String s){
+		String encoded="";
+		for (int i=0; i<s.length(); i++){
+			char c = s.charAt(i);
+			c++;
+			encoded = encoded + c;
+		}
+		return encoded;
+	}
+
+	public void List(){
+
+		for (int x=0; x<computerList.size(); x++){
+			
+			try{
+				DesktopComputer deskTop = (DesktopComputer)computerList.get(x);
+				System.out.println("------------" + "\n" + "COMPUTER #" + (x+1));
+				System.out.println("Type: DesktopComputer");
+				System.out.println("CPU: " + deskTop.getCPU());
+				System.out.println("RAM: " + deskTop.getRamSize() + " GB");
+				System.out.println("Disk: " + deskTop.getDiskSize() + " GB");
+				System.out.println("GPU: " + deskTop.getGPU()); 
+			}catch (ClassCastException e){
+				LaptopComputer lapTop = (LaptopComputer)computerList.get(x);
+				System.out.println("------------" + "\n" + "COMPUTER #" + (x+1));
+				System.out.println("Type: LaptopComputer");
+				System.out.println("CPU: " + lapTop.getCPU());
+				System.out.println("RAM: " + lapTop.getRamSize() + " GB");
+				System.out.println("Disk: " + lapTop.getDiskSize() + " GB");
+				System.out.println("Screen Size: " + lapTop.getScreenSize() + " inches");
+			}
+		
+		}
+
+	}
+
+	public void Add(){
+
+		int addOption = -1;
+		
+		while (addOption != 3){
+	
+			System.out.println("ADD A NEW COMPUTER" + "\n" +
+						"1. Add new LaptopComputer" + "\n" +
+						"2. Add new DesktopComputer" + "\n" +
+						"3. Back to main menu");
+			String addOptionString = keyboard.nextLine();
+			try{
+				addOption = Integer.parseInt(addOptionString);
+			}catch(NumberFormatException e){
+				addOption = -1;
+			}
+	
+			switch (addOption){
+			
+				case 1: {
+
+					System.out.println("Enter CPU type (i5/i7) : ");
+					String cpu = keyboard.nextLine();
+					System.out.println("Enter RAM size (8/16) : ");
+					String ramString = keyboard.nextLine();
+					System.out.println("Enter disk size (250/500) : ");
+					String diskSizeString = keyboard.nextLine();
+					System.out.println("Enter screen size (13/15) : ");
+					String screenSizeString = keyboard.nextLine();
+					
+					try {
+					
+						int ramSize = Integer.parseInt(ramString);
+						int diskSize = Integer.parseInt(diskSizeString);
+						int screenSize = Integer.parseInt(screenSizeString);
+						LaptopComputer addLT = LaptopComputer.getLaptopComputerInstance(screenSize, cpu, ramSize, diskSize);
+						if (addLT!=null){
+							computerList.add(addLT);
+						}
+						break;
+							
+					}
+					catch(NumberFormatException e){
+						System.out.println("***ERROR : Invalid entry type for one of the numerical values***");
+						break;
+					}
+				
+
+				}
+				case 2: {
+
+					System.out.println("Enter CPU type (i5/i7) : ");
+					String cpu = keyboard.nextLine();
+					System.out.println("Enter RAM size (8/16) : ");
+					String ramString = keyboard.nextLine();
+					System.out.println("Enter disk size (250/500) : ");
+					String diskSizeString = keyboard.nextLine();
+					System.out.println("Enter GPU (intel/amd/nvidia) : ");
+					String gpu = keyboard.nextLine();
+					
+					try {
+					
+						int ramSize = Integer.parseInt(ramString);
+						int diskSize = Integer.parseInt(diskSizeString);
+						DesktopComputer addDT = DesktopComputer.getDesktopComputerInstance(gpu, cpu, ramSize, diskSize);
+						if (addDT!=null){
+							computerList.add(addDT);
+						}
+						break;					
+					}
+					catch(NumberFormatException e){
+						System.out.println("***ERROR : Invalid entry type for one of the numerical values***");
+						break;
+					}
+
+				}
+				case 3: {
+					break;
+				}
+				default: {
+					System.out.println("***ERROR : Invalid option!***");
+				}
+				
+
+			}
+
+		}
+			 		
+	}
+
+	public void Delete(){
+
+		System.out.println("Enter number of computer to delete:");
+		String deleteOptionString = keyboard.nextLine();
+		try{
+			int deleteOption = Integer.parseInt(deleteOptionString) - 1;
+			for (int x=0; x<computerList.size(); x++){
+			
+				if (computerList.get(x).equals(computerList.get(deleteOption))){
+					computerList.remove(deleteOption);
+					return;
+				}
+			}
+		}catch (Exception e){
+			System.out.println("***ERROR : Invalid computer number entered ***");
+			return;
+		}
+		System.out.println("***ERROR : Invalid computer number entered ***");
+		
+	}
+		
+	public void Edit(){
+		
+		boolean isDesktop = false;
+		System.out.println("EDIT COMPUTER" + "\n" + "Enter number of computer to edit:");
+		String editOptionString = keyboard.nextLine();
+		try{
+			int editOption = Integer.parseInt(editOptionString);
+			if(editOption > computerList.size() || editOption < 0){
+				System.out.println("***ERROR : Invalid computer number entered ***");
+			}else{
+				try{
+					DesktopComputer comp = (DesktopComputer) computerList.get(editOption-1);
+					isDesktop = true;
+				}catch(Exception e){
+					//
+				}
+				
+
+				System.out.println("Enter CPU type (i5/i7) : ");
+				String cpu = keyboard.nextLine();
+				System.out.println("Enter RAM size (8/16) : ");
+				String ramString = keyboard.nextLine();
+				System.out.println("Enter disk size (250/500) : ");
+				String diskSizeString = keyboard.nextLine();
+				if (isDesktop){
+					System.out.println("Enter GPU (intel/amd/nvidia) : ");
+					String gpu = keyboard.nextLine();
+					try {
+					
+						int ramSize = Integer.parseInt(ramString);
+						int diskSize = Integer.parseInt(diskSizeString);
+						DesktopComputer addDT = DesktopComputer.getDesktopComputerInstance(gpu, cpu, ramSize, diskSize);
+						if (addDT!=null){
+							computerList.remove(editOption-1);
+							computerList.add(editOption-1, addDT);
+						}
+
+					}
+					catch(NumberFormatException e){
+						System.out.println("***ERROR : Invalid entry type for one of the numerical values***");
+
+					}
+					
+				}else{
+					System.out.println("Enter screen size (13/15) : ");
+					String screenSizeString = keyboard.nextLine();
+					try {
+					
+						int ramSize = Integer.parseInt(ramString);
+						int diskSize = Integer.parseInt(diskSizeString);
+						int screenSize = Integer.parseInt(screenSizeString);
+						LaptopComputer addLT = LaptopComputer.getLaptopComputerInstance(screenSize, cpu, ramSize, diskSize);
+						if (addLT!=null){
+							computerList.remove(editOption-1);
+							computerList.add(editOption-1, addLT);
+						}
+					
+							
+					}
+					catch(NumberFormatException e){
+						System.out.println("***ERROR : Invalid entry type for one of the numerical values***");
+			
+					}
+				}
+				
+					
+			}	
+			
+		}catch (Exception e){
+			System.out.println("***ERROR : Invalid computer number entered ***");
+			return;
+		}
+	}
+
+}

@@ -1,0 +1,6 @@
+grant { 
+	permission java.io.FilePermission "/root/assign1Data/*", "read";
+	permission java.io.FilePermission "/root/assign1Data/*", "delete";
+	permission java.io.FilePermission "/root/assign1Data", "read";
+	permission java.io.FilePermission "/root/assign1Data/*", "write";
+};
